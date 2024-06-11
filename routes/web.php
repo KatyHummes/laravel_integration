@@ -23,5 +23,4 @@ Route::middleware([
         return Inertia::render('Dashboard');
     })->name('dashboard');
 
-    Route::get('/import-anuncios', [AnuncioController::class, 'importJsonData']);
 });

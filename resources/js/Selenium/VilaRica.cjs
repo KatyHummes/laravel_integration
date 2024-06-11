@@ -1,9 +1,26 @@
-const { Builder, By, until } = require('selenium-webdriver');
+const { Builder, By } = require('selenium-webdriver');
 const fs = require('fs');
 const path = require('path');
+const mysql = require('mysql');
 
 // Configuração do WebDriver
 const driver = new Builder().forBrowser('chrome').build();
+
+// Configuração da conexão com o banco de dados
+const connection = mysql.createConnection({
+  host: '127.0.0.1',
+  user: 'root',
+  password: '',
+  database: 'laravel_integration'
+});
+
+connection.connect((err) => {
+  if (err) {
+    console.error('Erro ao conectar ao banco de dados:', err);
+    return;
+  }
+  console.log('Conectado ao banco de dados.');
+});
 
 (async function scrapeData() {
   try {
@@ -21,13 +38,6 @@ const driver = new Builder().forBrowser('chrome').build();
 
     // Encontrando os anúncios
     let anuncios = await driver.findElements(By.className('wrap-link'));
-
-    // Verificando se o arquivo JSON já existe
-    let data = [];
-    if (fs.existsSync('historico_anuncios.json')) {
-      const rawData = fs.readFileSync('historico_anuncios.json');
-      data = JSON.parse(rawData);
-    }
 
     // Iterando sobre os anúncios
     for (let i = 0; i < anuncios.length; i++) {
@@ -60,20 +70,28 @@ const driver = new Builder().forBrowser('chrome').build();
       );
       console.log(`Screenshot salvo em: ${screenshotPath}`);
 
-      data.push({
-        data: new Date().toISOString(),
-        url: url,
-        local: local,
-        preco: preco,
-        screenshot: screenshotPath
+      // Inserir dados no banco de dados
+      const query = 'INSERT INTO anuncios (data, url, local, preco, screenshot) VALUES (?, ?, ?, ?, ?)';
+      const values = [new Date().toISOString(), url, local, preco, screenshotPath];
+
+      connection.query(query, values, (err, results) => {
+        if (err) {
+          console.error('Erro ao inserir dados no banco de dados:', err);
+          return;
+        }
+        console.log('Dados inseridos no banco de dados:', results);
       });
     }
-
-    // Salvando os dados no arquivo JSON
-    fs.writeFileSync('historico_anuncios.json', JSON.stringify(data, null, 2));
   } catch (error) {
     console.error(error);
   } finally {
     await driver.quit();
+    connection.end((err) => {
+      if (err) {
+        console.error('Erro ao finalizar a conexão ao banco de dados:', err);
+      } else {
+        console.log('Conexão ao banco de dados finalizada.');
+      }
+    });
   }
 })();
