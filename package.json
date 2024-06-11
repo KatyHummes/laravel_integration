@@ -21,6 +21,7 @@
     "dependencies": {
         "chromedriver": "^125.0.3",
         "fs": "^0.0.1-security",
+        "mysql": "^2.18.1",
         "selenium-webdriver": "^4.21.0"
     }
 }
